@@ -1,0 +1,1336 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>豪華皇家大老二 - Royal Big Two</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&family=Noto+Sans+TC:wght@400;700;900&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', 'Noto Sans TC', sans-serif;
+            background-color: #064e3b;
+            background-image: radial-gradient(circle, #065f46 0%, #022c22 100%);
+            overflow-x: hidden;
+            user-select: none;
+        }
+        /* Felt Table Texture overlay */
+        .felt-table {
+            position: relative;
+        }
+        .felt-table::before {
+            content: "";
+            position: absolute;
+            inset: 0;
+            background-image: radial-gradient(rgba(255,255,255,0.05) 1px, transparent 0), radial-gradient(rgba(255,255,255,0.05) 1px, transparent 0);
+            background-size: 8px 8px;
+            background-position: 0 0, 4px 4px;
+            opacity: 0.3;
+            pointer-events: none;
+            z-index: 0;
+        }
+        /* Scrollbar customizing */
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: rgba(0,0,0,0.1);
+        }
+        ::-webkit-scrollbar-thumb {
+            background: rgba(255,255,255,0.2);
+            border-radius: 3px;
+        }
+        /* Custom 3D Card flips and transitions */
+        .card-container {
+            transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        .card-container.selected {
+            transform: translateY(-24px) scale(1.05);
+            box-shadow: 0 10px 20px rgba(251, 191, 36, 0.4);
+        }
+    </style>
+</head>
+<body class="min-h-screen text-white flex flex-col justify-between felt-table">
+
+    <header class="relative z-10 bg-black/40 backdrop-blur-md border-b border-emerald-800 px-4 py-2.5 flex items-center justify-between">
+        <div class="flex items-center space-x-2">
+            <span class="text-2xl">♠️</span>
+            <h1 class="font-black text-xl tracking-wider text-transparent bg-clip-text bg-gradient-to-r from-amber-300 via-amber-400 to-yellow-500">
+                ROYAL BIG TWO <span class="text-xs px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-300 font-normal">台灣大老二</span>
+            </h1>
+        </div>
+        <div class="flex items-center space-x-3 text-sm">
+            <button id="soundToggleBtn" onclick="toggleMute()" class="p-2 rounded bg-emerald-800/50 hover:bg-emerald-700/50 transition border border-emerald-700 text-amber-300">
+                🔊 音效
+            </button>
+            <button onclick="showRulesModal()" class="p-2 rounded bg-emerald-800/50 hover:bg-emerald-700/50 transition border border-emerald-700 text-amber-300">
+                📖 規則說明
+            </button>
+            <button onclick="restartGame()" class="p-2 px-3 rounded bg-amber-600 hover:bg-amber-500 transition font-bold text-white shadow-lg shadow-amber-900/40">
+                🔄 重開局
+            </button>
+        </div>
+    </header>
+
+    <main class="relative z-10 flex-1 flex flex-col justify-between p-4 max-w-7xl mx-auto w-full">
+        
+        <!-- Top Opponent (AI 2) -->
+        <div class="flex flex-col items-center justify-center">
+            <div id="ai2-panel" class="flex flex-col items-center p-2 rounded-xl border border-white/5 bg-black/20 backdrop-blur-sm min-w-[200px] transition-all duration-300">
+                <div class="flex items-center space-x-2">
+                    <div id="ai2-avatar-glow" class="w-8 h-8 rounded-full bg-slate-700 flex items-center justify-center border-2 border-slate-500 font-bold text-sm">🤖</div>
+                    <div>
+                        <div class="font-semibold text-xs flex items-center space-x-1">
+                            <span>皇家 AI 2</span>
+                            <span id="ai2-status" class="text-[10px] px-1 bg-red-500/30 text-red-300 rounded hidden">思考中</span>
+                        </div>
+                        <div id="ai2-card-count" class="text-[11px] text-amber-300/80 font-bold">手牌數: 13 張</div>
+                    </div>
+                </div>
+                <!-- AI 2 Mini Card Backs preview -->
+                <div id="ai2-hand-preview" class="flex -space-x-4 mt-1 overflow-hidden h-8 items-center">
+                    <!-- Dynamic -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Middle Row: Left Opponent (AI 1), Center Desk, Right Opponent (AI 3) -->
+        <div class="flex-1 grid grid-cols-12 items-center gap-4 my-2">
+            
+            <!-- Left Opponent (AI 1) -->
+            <div class="col-span-3 flex flex-col items-start justify-center">
+                <div id="ai1-panel" class="flex flex-col p-2.5 rounded-xl border border-white/5 bg-black/20 backdrop-blur-sm w-full max-w-[150px] transition-all duration-300">
+                    <div class="flex items-center space-x-2">
+                        <div id="ai1-avatar-glow" class="w-8 h-8 rounded-full bg-slate-700 flex items-center justify-center border-2 border-slate-500 font-bold text-sm">🤖</div>
+                        <div>
+                            <div class="font-semibold text-xs flex items-center space-x-1">
+                                <span>皇家 AI 1</span>
+                            </div>
+                            <span id="ai1-status" class="text-[10px] px-1 bg-red-500/30 text-red-300 rounded hidden">思考中</span>
+                            <div id="ai1-card-count" class="text-[11px] text-amber-300/80 font-bold">手牌: 13</div>
+                        </div>
+                    </div>
+                    <div id="ai1-hand-preview" class="flex flex-wrap gap-0.5 mt-2 h-6 overflow-hidden">
+                        <!-- Dynamic -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Center Table Display (Played Cards Area) -->
+            <div class="col-span-6 h-full min-h-[220px] rounded-2xl border-2 border-dashed border-emerald-700/50 bg-emerald-950/40 relative flex flex-col justify-between p-4 shadow-inner">
+                
+                <!-- Helper prompt/Status text inside desk -->
+                <div class="absolute top-2 left-1/2 -translate-x-1/2 text-[11px] uppercase tracking-widest text-emerald-400 font-bold bg-emerald-900/60 px-3 py-1 rounded-full border border-emerald-700/60">
+                    BATTLE DESK
+                </div>
+
+                <!-- Played Cards Container -->
+                <div class="flex-1 flex flex-col justify-center items-center">
+                    <div id="center-cards-pool" class="flex flex-wrap justify-center items-center gap-2 transform transition-all duration-300 scale-95 md:scale-100">
+                        <!-- Currently active cards on desk are rendered here dynamically -->
+                        <div class="text-emerald-500/60 font-medium text-sm text-center py-6 px-4">
+                            桌面上目前無卡牌<br><span class="text-[11px] text-emerald-600">拿到梅花 3 的玩家先攻！</span>
+                        </div>
+                    </div>
+                    <div id="desk-play-info" class="text-center mt-2 h-6 text-xs text-amber-200 font-medium">
+                        <!-- "Player played Pair of Kings!" -->
+                    </div>
+                </div>
+
+                <!-- Last Action Banner (Floating banner telling who did what) -->
+                <div id="action-banner" class="absolute bottom-2 left-1/2 -translate-x-1/2 px-4 py-1 rounded-lg text-xs font-bold bg-amber-500/15 border border-amber-500/30 text-amber-200 shadow-md hidden animate-pulse">
+                    <!-- AI 1 Passed -->
+                </div>
+
+            </div>
+
+            <!-- Right Opponent (AI 3) -->
+            <div class="col-span-3 flex flex-col items-end justify-center">
+                <div id="ai3-panel" class="flex flex-col p-2.5 rounded-xl border border-white/5 bg-black/20 backdrop-blur-sm w-full max-w-[150px] transition-all duration-300">
+                    <div class="flex items-center space-x-2 justify-end">
+                        <div class="text-right">
+                            <div class="font-semibold text-xs flex items-center justify-end space-x-1">
+                                <span id="ai3-status" class="text-[10px] px-1 bg-red-500/30 text-red-300 rounded hidden">思考中</span>
+                                <span>皇家 AI 3</span>
+                            </div>
+                            <div id="ai3-card-count" class="text-[11px] text-amber-300/80 font-bold">手牌: 13</div>
+                        </div>
+                        <div id="ai3-avatar-glow" class="w-8 h-8 rounded-full bg-slate-700 flex items-center justify-center border-2 border-slate-500 font-bold text-sm">🤖</div>
+                    </div>
+                    <div id="ai3-hand-preview" class="flex flex-wrap gap-0.5 mt-2 h-6 overflow-hidden justify-end">
+                        <!-- Dynamic -->
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+        <div class="flex flex-col items-center w-full mt-2">
+            <!-- Player Status Indicator & Hints -->
+            <div class="w-full flex justify-between items-center px-4 py-1 mb-2 bg-black/20 rounded-lg text-xs border border-white/5">
+                <div class="flex items-center space-x-2">
+                    <span id="player-turn-light" class="w-2 h-2 rounded-full bg-red-500 animate-ping"></span>
+                    <span id="player-turn-text" class="font-bold text-amber-300">輪到你的回合！</span>
+                </div>
+                <div id="validation-msg" class="text-red-400 font-medium text-[11px]"></div>
+                <div class="text-slate-400">你 (手牌剩餘: <span id="player-card-count" class="font-bold text-white">13</span> 張)</div>
+            </div>
+
+            <!-- Action buttons panel -->
+            <div class="flex flex-wrap justify-center items-center gap-2 md:gap-3 mb-4">
+                <button onclick="sortUserHand('rank')" class="px-3 py-1.5 rounded-lg bg-emerald-800 hover:bg-emerald-700 transition text-xs border border-emerald-600 shadow font-semibold">
+                    按大小排序
+                </button>
+                <button onclick="sortUserHand('suit')" class="px-3 py-1.5 rounded-lg bg-emerald-800 hover:bg-emerald-700 transition text-xs border border-emerald-600 shadow font-semibold">
+                    按花色排序
+                </button>
+                <button id="hintBtn" onclick="onHintClick()" class="px-4 py-1.5 rounded-lg bg-indigo-700 hover:bg-indigo-600 transition text-xs border border-indigo-500 shadow font-bold text-white flex items-center gap-1">
+                    💡 提示
+                </button>
+                
+                <div class="h-6 w-px bg-white/10 mx-1"></div>
+
+                <button id="passBtn" onclick="onPassClick()" class="px-5 py-1.5 rounded-lg bg-slate-600 hover:bg-slate-500 transition text-xs font-bold border border-slate-500 shadow-md text-white disabled:opacity-40 disabled:pointer-events-none">
+                    PASS 歐打 (過)
+                </button>
+                <button id="playBtn" onclick="onPlayClick()" class="px-6 py-1.5 rounded-lg bg-gradient-to-r from-amber-500 to-yellow-500 hover:from-amber-400 hover:to-yellow-400 text-slate-950 font-black text-xs border-y border-amber-300 shadow-lg shadow-amber-900/30 disabled:opacity-40 disabled:pointer-events-none transition">
+                    PLAY 出牌
+                </button>
+            </div>
+
+            <!-- Player Hand Cards -->
+            <div class="relative w-full max-w-4xl h-36 flex justify-center items-end px-4">
+                <div id="player-hand-container" class="relative w-full h-full flex justify-center">
+                    <!-- Cards will be absolutely fanned out inside here -->
+                </div>
+            </div>
+        </div>
+
+    </main>
+
+    <footer class="relative z-10 bg-black/60 border-t border-emerald-950 px-4 py-1.5 text-center text-[11px] text-emerald-400 flex justify-between items-center">
+        <div>
+            本局歷史記錄: <span id="latest-history-log" class="text-white ml-2">開始發牌，輪到有梅花 3 的玩家先攻。</span>
+        </div>
+        <div>
+            © 豪華皇家大老二 2026 - 安全無涉賭益智桌遊
+        </div>
+    </footer>
+
+    <!-- Message overlay (toast replacement) -->
+    <div id="toast-message" class="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-50 px-6 py-3 bg-black/90 border border-amber-500/50 text-amber-300 rounded-2xl shadow-2xl flex flex-col items-center justify-center space-y-1 hidden">
+        <div id="toast-icon" class="text-xl">⚠️</div>
+        <div id="toast-text" class="text-sm font-bold text-center"></div>
+    </div>
+
+    <!-- Rules Modal -->
+    <div id="rulesModal" class="fixed inset-0 bg-black/80 z-50 backdrop-blur-sm flex items-center justify-center p-4 hidden">
+        <div class="bg-gradient-to-b from-emerald-900 to-emerald-950 border border-emerald-700 p-6 rounded-2xl max-w-lg w-full max-h-[85vh] overflow-y-auto text-white shadow-2xl">
+            <div class="flex justify-between items-center mb-4 border-b border-emerald-800 pb-3">
+                <h3 class="text-lg font-black text-amber-400">📖 皇家台灣大老二玩法規則</h3>
+                <button onclick="closeRulesModal()" class="text-emerald-400 hover:text-white font-bold text-xl">&times;</button>
+            </div>
+            <div class="space-y-3.5 text-sm text-slate-200">
+                <p class="border-l-2 border-amber-400 pl-2 text-amber-300 font-bold">基本順序大小</p>
+                <p>牌值大小：<span class="font-bold text-white">2 > A > K > Q > J > 10 > 9 > 8 > 7 > 6 > 5 > 4 > 3</span>。</p>
+                <p>花色大小：<span class="font-bold text-red-400">黑桃 (♠) > 紅心 (♥) > 方塊 (♦) > 梅花 (♣)</span>。</p>
+                
+                <p class="border-l-2 border-amber-400 pl-2 text-amber-300 font-bold">首輪發牌</p>
+                <p>每人分發 13 張牌。第一局由持有 <span class="text-amber-300 font-bold">梅花 3 (♣3)</span> 的玩家先出。出牌的組合中<span class="underline text-amber-300">必須包含梅花 3</span>（例如單張梅花 3、包含梅花 3 的對子或順子）。</p>
+
+                <p class="border-l-2 border-amber-400 pl-2 text-amber-300 font-bold">合法牌型</p>
+                <ul class="list-disc pl-5 space-y-1 text-xs">
+                    <li><strong class="text-white">單張 (Single)：</strong> 任一張牌。</li>
+                    <li><strong class="text-white">對子 (Pair)：</strong> 兩張點數相同的牌。比較點數大小；點數相同時，比較擁有最大花色的那張。</li>
+                    <li><strong class="text-white">三條 (Triple)：</strong> 三張點數相同的牌。</li>
+                    <li><strong class="text-white">五張牌型 (5-Card Hands)：</strong>
+                        <ul class="list-circle pl-5 mt-1 space-y-0.5">
+                            <li><strong class="text-amber-200">順子 (Straight)：</strong> 五張連續點數的牌。 (例如 3-4-5-6-7 至 J-Q-K-A-2)。</li>
+                            <li><strong class="text-amber-200">同花 (Flush)：</strong> 五張相同花色的牌。比花色優先，再比最大牌點數。</li>
+                            <li><strong class="text-amber-200">葫蘆 (Full House)：</strong> 三條加一個對子。以三條的點數決定大小。</li>
+                            <li><strong class="text-amber-200">鐵支/四條 (Four of a Kind / Bomb)：</strong> 四條加一張任意牌。可直接打擊任意普通的五張牌型！</li>
+                            <li><strong class="text-amber-200">同花順 (Straight Flush)：</strong> 相同花色的連續五張牌。為最大五張牌型！</li>
+                        </ul>
+                    </li>
+                </ul>
+
+                <p class="border-l-2 border-amber-400 pl-2 text-amber-300 font-bold">出牌限制</p>
+                <p>後出的玩家必須打出比上一家<span class="text-amber-300 underline font-bold">更大</span>的且<span class="text-amber-300 underline font-bold">張數相同</span>的組合。如果不想出牌或沒有牌可以壓制，可以選擇 PASS (過)。當其餘三家都 PASS，則由最後出牌的玩家重新取得新的一輪先攻出牌權。</p>
+                
+                <p class="border-l-2 border-amber-400 pl-2 text-amber-300 font-bold">獲勝與結算</p>
+                <p>最先將手牌全部出完的玩家獲得勝利。其餘玩家依據手上殘留的張數扣分。若手上殘留大於等於 10 張，扣分加倍！</p>
+            </div>
+            <div class="mt-6 text-center">
+                <button onclick="closeRulesModal()" class="px-6 py-2 rounded-xl bg-amber-500 text-slate-950 font-bold text-xs hover:bg-amber-400 transition shadow-lg">
+                    我知道了，開始吧！
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- GameOver Modal -->
+    <div id="gameOverModal" class="fixed inset-0 bg-black/90 z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-gradient-to-b from-yellow-950 to-emerald-950 border-2 border-yellow-500 p-8 rounded-3xl max-w-md w-full text-center text-white shadow-2xl relative overflow-hidden">
+            <!-- Glow background effect -->
+            <div class="absolute -top-10 -left-10 w-40 h-40 bg-yellow-500/10 rounded-full blur-2xl"></div>
+            <div class="absolute -bottom-10 -right-10 w-40 h-40 bg-emerald-500/10 rounded-full blur-2xl"></div>
+
+            <h2 id="endGameTitle" class="text-4xl font-extrabold tracking-widest text-transparent bg-clip-text bg-gradient-to-r from-amber-300 to-yellow-500 mb-1">
+                🏆 遊戲結束
+            </h2>
+            <p id="endGameSubtitle" class="text-sm text-yellow-300/80 mb-6">結算計分</p>
+            
+            <div class="space-y-3.5 mb-8">
+                <!-- Row 0: Player -->
+                <div class="flex items-center justify-between p-2.5 rounded-xl bg-white/5 border border-white/5">
+                    <span class="font-bold flex items-center space-x-1"><span>👤</span> <span>你</span></span>
+                    <span id="score-player" class="font-mono text-sm">手牌: 0張 (第一名!)</span>
+                </div>
+                <!-- Row 1: AI 1 -->
+                <div class="flex items-center justify-between p-2.5 rounded-xl bg-white/5 border border-white/5">
+                    <span class="font-bold flex items-center space-x-1"><span>🤖</span> <span>皇家 AI 1</span></span>
+                    <span id="score-ai1" class="font-mono text-sm">手牌: 5張</span>
+                </div>
+                <!-- Row 2: AI 2 -->
+                <div class="flex items-center justify-between p-2.5 rounded-xl bg-white/5 border border-white/5">
+                    <span class="font-bold flex items-center space-x-1"><span>🤖</span> <span>皇家 AI 2</span></span>
+                    <span id="score-ai2" class="font-mono text-sm">手牌: 11張 (扣分雙倍)</span>
+                </div>
+                <!-- Row 3: AI 3 -->
+                <div class="flex items-center justify-between p-2.5 rounded-xl bg-white/5 border border-white/5">
+                    <span class="font-bold flex items-center space-x-1"><span>🤖</span> <span>皇家 AI 3</span></span>
+                    <span id="score-ai3" class="font-mono text-sm">手牌: 2張</span>
+                </div>
+            </div>
+
+            <button onclick="restartGame()" class="w-full py-3.5 rounded-xl bg-gradient-to-r from-amber-500 to-yellow-400 text-slate-950 font-black text-sm hover:from-amber-400 hover:to-yellow-300 transition shadow-lg shadow-yellow-900/40">
+                🎮 再戰一局！
+            </button>
+        </div>
+    </div>
+
+
+    <script>
+        // Web Audio Synthesizer
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        let isMuted = false;
+
+        function playSynthSound(type) {
+            if (isMuted) return;
+            try {
+                if (audioCtx.state === 'suspended') {
+                    audioCtx.resume();
+                }
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+
+                const now = audioCtx.currentTime;
+
+                if (type === 'shuffle') {
+                    // Quick scratchy white noise burst for shuffling
+                    const bufferSize = audioCtx.sampleRate * 0.1;
+                    const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+                    const data = buffer.getChannelData(0);
+                    for (let i = 0; i < bufferSize; i++) {
+                        data[i] = Math.random() * 2 - 1;
+                    }
+                    const noise = audioCtx.createBufferSource();
+                    noise.buffer = buffer;
+                    const noiseFilter = audioCtx.createBiquadFilter();
+                    noiseFilter.type = 'bandpass';
+                    noiseFilter.frequency.value = 1000;
+                    noise.connect(noiseFilter);
+                    noiseFilter.connect(gain);
+                    gain.gain.setValueAtTime(0.08, now);
+                    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.1);
+                    noise.start(now);
+                } else if (type === 'slide') {
+                    // Card hover or slide sound
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(400, now);
+                    osc.frequency.exponentialRampToValueAtTime(150, now + 0.15);
+                    gain.gain.setValueAtTime(0.05, now);
+                    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.15);
+                    osc.start(now);
+                    osc.stop(now + 0.15);
+                } else if (type === 'play') {
+                    // Card play slap
+                    osc.type = 'triangle';
+                    osc.frequency.setValueAtTime(300, now);
+                    osc.frequency.setValueAtTime(100, now + 0.05);
+                    gain.gain.setValueAtTime(0.15, now);
+                    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.12);
+                    osc.start(now);
+                    osc.stop(now + 0.12);
+                } else if (type === 'pass') {
+                    // A soft thump
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(100, now);
+                    osc.frequency.exponentialRampToValueAtTime(50, now + 0.18);
+                    gain.gain.setValueAtTime(0.1, now);
+                    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.18);
+                    osc.start(now);
+                    osc.stop(now + 0.18);
+                } else if (type === 'win') {
+                    // Major happy arpeggio
+                    const notes = [261.63, 329.63, 392.00, 523.25];
+                    notes.forEach((freq, idx) => {
+                        const o = audioCtx.createOscillator();
+                        const g = audioCtx.createGain();
+                        o.connect(g);
+                        g.connect(audioCtx.destination);
+                        o.type = 'triangle';
+                        o.frequency.setValueAtTime(freq, now + idx * 0.08);
+                        g.gain.setValueAtTime(0.1, now + idx * 0.08);
+                        g.gain.exponentialRampToValueAtTime(0.001, now + idx * 0.08 + 0.3);
+                        o.start(now + idx * 0.08);
+                        o.stop(now + idx * 0.08 + 0.3);
+                    });
+                } else if (type === 'lose') {
+                    // Minor sad down arpeggio
+                    const notes = [392.00, 311.13, 261.63, 196.00];
+                    notes.forEach((freq, idx) => {
+                        const o = audioCtx.createOscillator();
+                        const g = audioCtx.createGain();
+                        o.connect(g);
+                        g.connect(audioCtx.destination);
+                        o.type = 'sawtooth';
+                        o.frequency.setValueAtTime(freq, now + idx * 0.1);
+                        g.gain.setValueAtTime(0.08, now + idx * 0.1);
+                        g.gain.exponentialRampToValueAtTime(0.001, now + idx * 0.1 + 0.4);
+                        o.start(now + idx * 0.1);
+                        o.stop(now + idx * 0.1 + 0.4);
+                    });
+                }
+            } catch(e) {
+                console.error("Audio error: ", e);
+            }
+        }
+
+        function toggleMute() {
+            isMuted = !isMuted;
+            document.getElementById('soundToggleBtn').innerHTML = isMuted ? "🔇 靜音" : "🔊 音效";
+            document.getElementById('soundToggleBtn').classList.toggle('bg-red-950/40', isMuted);
+            document.getElementById('soundToggleBtn').classList.toggle('text-red-400', isMuted);
+        }
+    </script>
+
+
+    <script>
+        // Constants
+        const SUITS = { 'C': '♣', 'D': '♦', 'H': '♥', 'S': '♠' };
+        const SUIT_NAMES = { 'C': '梅花', 'D': '方塊', 'H': '紅心', 'S': '黑桃' };
+        const SUIT_COLORS = { 'C': 'text-slate-900', 'D': 'text-red-600', 'H': 'text-red-600', 'S': 'text-slate-900' };
+        const SUIT_VALS = { 'C': 0, 'D': 1, 'H': 2, 'S': 3 }; // Taiwan: Spades > Hearts > Diamonds > Clubs
+
+        const RANKS = ['3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K', 'A', '2'];
+        const RANK_VALS = {
+            '3': 0, '4': 1, '5': 2, '6': 3, '7': 4, '8': 5, '9': 6, '10': 7,
+            'J': 8, 'Q': 9, 'K': 10, 'A': 11, '2': 12
+        };
+
+        // Game State Variables
+        let deck = [];
+        let players = [
+            { id: 0, name: '你', hand: [] },
+            { id: 1, name: '皇家 AI 1', hand: [] },
+            { id: 2, name: '皇家 AI 2', hand: [] },
+            { id: 3, name: '皇家 AI 3', hand: [] }
+        ];
+        let selectedUserCards = []; // Tracks selected card DOM elements / card objects
+        let currentTurn = 0; // 0: Player, 1: AI 1, 2: AI 2, 3: AI 3
+        let lastPlay = null; // { type, score, highestCard, cards: [], cardsCount, playedBy }
+        let passCount = 0;
+        let isFirstPlayOfRound = true; // Forcing Club 3 to be played first
+        let gameActive = false;
+
+        // --- GAME SYSTEM HELPERS ---
+
+        function createDeck() {
+            let id = 0;
+            const newDeck = [];
+            for (let rank of RANKS) {
+                for (let suit of Object.keys(SUITS)) {
+                    newDeck.push({
+                        id: `card-${id++}`,
+                        rank: rank,
+                        suit: suit,
+                        rankVal: RANK_VALS[rank],
+                        suitVal: SUIT_VALS[suit],
+                        // Absolute score calculated to uniquely determine linear strength order
+                        absScore: RANK_VALS[rank] * 4 + SUIT_VALS[suit]
+                    });
+                }
+            }
+            return newDeck;
+        }
+
+        function shuffle(array) {
+            for (let i = array.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [array[i], array[j]] = [array[j], array[i]];
+            }
+            return array;
+        }
+
+        function sortHandByRank(hand) {
+            return hand.sort((a, b) => a.absScore - b.absScore);
+        }
+
+        function sortHandBySuit(hand) {
+            return hand.sort((a, b) => {
+                if (a.suitVal !== b.suitVal) return a.suitVal - b.suitVal;
+                return a.rankVal - b.rankVal;
+            });
+        }
+
+        // Display beautiful in-game modal notice rather than using default window alert
+        function showToast(text, icon = "⚠️") {
+            const toast = document.getElementById('toast-message');
+            document.getElementById('toast-icon').innerText = icon;
+            document.getElementById('toast-text').innerText = text;
+            toast.classList.remove('hidden');
+            setTimeout(() => {
+                toast.classList.add('hidden');
+            }, 2000);
+        }
+
+        function logHistory(msg) {
+            document.getElementById('latest-history-log').innerText = msg;
+        }
+
+        // --- STREAMING_CHUNK: Hand Evaluation Mathematics ---
+        
+        function isStraight(cards) {
+            if (cards.length !== 5) return false;
+            const sorted = [...cards].sort((a, b) => a.rankVal - b.rankVal);
+            for (let i = 0; i < 4; i++) {
+                if (sorted[i+1].rankVal !== sorted[i].rankVal + 1) return false;
+            }
+            return true;
+        }
+
+        function isFlush(cards) {
+            if (cards.length !== 5) return false;
+            const targetSuit = cards[0].suit;
+            return cards.every(c => c.suit === targetSuit);
+        }
+
+        // Returns rank value of the quadruple, or null
+        function getBombRank(cards) {
+            if (cards.length !== 5) return null;
+            const sorted = [...cards].sort((a, b) => a.rankVal - b.rankVal);
+            // Case 1: Quadruple + Single (XXXXY)
+            if (sorted[0].rankVal === sorted[3].rankVal) return sorted[0].rankVal;
+            // Case 2: Single + Quadruple (YXXXX)
+            if (sorted[1].rankVal === sorted[4].rankVal) return sorted[1].rankVal;
+            return null;
+        }
+
+        // Returns rank value of the triple, or null
+        function getFullHouseRank(cards) {
+            if (cards.length !== 5) return null;
+            const sorted = [...cards].sort((a, b) => a.rankVal - b.rankVal);
+            // Case 1: Triple + Pair (XXXYY)
+            if (sorted[0].rankVal === sorted[2].rankVal && sorted[3].rankVal === sorted[4].rankVal) {
+                return sorted[0].rankVal;
+            }
+            // Case 2: Pair + Triple (XXYYY)
+            if (sorted[0].rankVal === sorted[1].rankVal && sorted[2].rankVal === sorted[4].rankVal) {
+                return sorted[4].rankVal;
+            }
+            return null;
+        }
+
+        function getComboDetails(cards) {
+            if (cards.length === 1) {
+                return { type: 'SINGLE', score: cards[0].absScore, highestCard: cards[0] };
+            }
+            if (cards.length === 2) {
+                if (cards[0].rank === cards[1].rank) {
+                    const highestCard = cards[0].suitVal > cards[1].suitVal ? cards[0] : cards[1];
+                    return { type: 'PAIR', score: highestCard.absScore, highestCard };
+                }
+            }
+            if (cards.length === 3) {
+                if (cards[0].rank === cards[1].rank && cards[1].rank === cards[2].rank) {
+                    const sorted = [...cards].sort((a, b) => b.suitVal - a.suitVal);
+                    return { type: 'TRIPLE', score: sorted[0].absScore, highestCard: sorted[0] };
+                }
+            }
+            if (cards.length === 5) {
+                const sorted = [...cards].sort((a, b) => a.rankVal - b.rankVal);
+                const straight = isStraight(sorted);
+                const flush = isFlush(sorted);
+
+                if (straight && flush) {
+                    // Straight flush: ranked by the absolute score of the highest card
+                    const highestCard = sorted[4];
+                    return { type: 'STRAIGHT_FLUSH', score: 50000 + highestCard.absScore, highestCard, subRank: 5 };
+                }
+
+                const bombRank = getBombRank(sorted);
+                if (bombRank !== null) {
+                    const highestCard = sorted.find(c => c.rankVal === bombRank);
+                    return { type: 'BOMB', score: 40000 + bombRank, highestCard, subRank: 4 };
+                }
+
+                const fhRank = getFullHouseRank(sorted);
+                if (fhRank !== null) {
+                    const highestCard = sorted.find(c => c.rankVal === fhRank);
+                    return { type: 'FULL_HOUSE', score: 30000 + fhRank, highestCard, subRank: 3 };
+                }
+
+                if (flush) {
+                    // Flush: Ranked by suit first, then highest card value
+                    const suitVal = sorted[0].suitVal;
+                    const highestCard = sorted[4];
+                    return { type: 'FLUSH', score: 20000 + suitVal * 100 + highestCard.rankVal, highestCard, subRank: 2 };
+                }
+
+                if (straight) {
+                    const highestCard = sorted[4];
+                    return { type: 'STRAIGHT', score: 10000 + highestCard.absScore, highestCard, subRank: 1 };
+                }
+            }
+            return null;
+        }
+
+        function canPlayCombo(selectedCards, previousPlay, checkClub3) {
+            const current = getComboDetails(selectedCards);
+            if (!current) return false;
+
+            // Rule: If it's the absolute first play of the game, it must contain Club 3
+            if (checkClub3) {
+                const hasClub3 = selectedCards.some(c => c.rank === '3' && c.suit === 'C');
+                if (!hasClub3) return false;
+            }
+
+            // If starting a new trick (all passed or first player of the round)
+            if (!previousPlay) return true;
+
+            // Must match the number of cards played
+            if (selectedCards.length !== previousPlay.cardsCount) return false;
+
+            if (selectedCards.length < 5) {
+                if (current.type !== previousPlay.type) return false;
+                return current.score > previousPlay.score;
+            }
+
+            // Five card hand matching hierarchy
+            if (selectedCards.length === 5) {
+                // If same sub-category of 5-card combo, compare scores
+                if (current.type === previousPlay.type) {
+                    return current.score > previousPlay.score;
+                }
+                // Otherwise, compare hierarchical type rank
+                return current.subRank > previousPlay.subRank;
+            }
+
+            return false;
+        }
+
+        // Translate English Combo Type to Chinese descriptive text
+        function translateCombo(combo) {
+            if (!combo) return "";
+            if (combo.type === 'SINGLE') return `單張 ${combo.highestCard.suit}${combo.highestCard.rank}`;
+            if (combo.type === 'PAIR') return `對子 ${combo.highestCard.rank}`;
+            if (combo.type === 'TRIPLE') return `三條 ${combo.highestCard.rank}`;
+            if (combo.type === 'STRAIGHT') return `順子 ${combo.highestCard.rank}高`;
+            if (combo.type === 'FLUSH') return `同花 ${SUIT_NAMES[combo.highestCard.suit]}高`;
+            if (combo.type === 'FULL_HOUSE') return `葫蘆 ${combo.highestCard.rank}高`;
+            if (combo.type === 'BOMB') return `鐵支 ${combo.highestCard.rank}高`;
+            if (combo.type === 'STRAIGHT_FLUSH') return `同花順 ${combo.highestCard.rank}高`;
+            return combo.type;
+        }
+
+
+        // --- STREAMING_CHUNK: Advanced AI Brain & Solver ---
+
+        // AI Combination Generator: yields all possible hands of size 1, 2, 3, 5
+        function generateAllCombos(hand) {
+            const singles = hand.map(c => [c]);
+            
+            // Group by rank
+            const rankGroups = {};
+            hand.forEach(c => {
+                if (!rankGroups[c.rank]) rankGroups[c.rank] = [];
+                rankGroups[c.rank].push(c);
+            });
+
+            const pairs = [];
+            const triples = [];
+            const bombs = [];
+
+            Object.keys(rankGroups).forEach(rank => {
+                const grp = rankGroups[rank];
+                if (grp.length >= 2) {
+                    // Generate pairs
+                    for (let i = 0; i < grp.length; i++) {
+                        for (let j = i + 1; j < grp.length; j++) {
+                            pairs.push([grp[i], grp[j]]);
+                        }
+                    }
+                }
+                if (grp.length >= 3) {
+                    // Generate triples
+                    for (let i = 0; i < grp.length; i++) {
+                        for (let j = i + 1; j < grp.length; j++) {
+                            for (let k = j + 1; k < grp.length; k++) {
+                                triples.push([grp[i], grp[j], grp[k]]);
+                            }
+                        }
+                    }
+                }
+                if (grp.length === 4) {
+                    // Quadruple base
+                    // Combine with every other card
+                    hand.forEach(otherCard => {
+                        if (otherCard.rank !== rank) {
+                            bombs.push([...grp, otherCard]);
+                        }
+                    });
+                }
+            });
+
+            // 5-Card Hands generators
+            const straights = [];
+            const flushes = [];
+            const fullHouses = [];
+            const straightFlushes = [];
+
+            // Straights search: finding 5 consecutive rank values
+            // Rank values are 0..12.
+            for (let rVal = 0; rVal <= 8; rVal++) {
+                const r0 = RANKS[rVal];
+                const r1 = RANKS[rVal+1];
+                const r2 = RANKS[rVal+2];
+                const r3 = RANKS[rVal+3];
+                const r4 = RANKS[rVal+4];
+
+                if (rankGroups[r0] && rankGroups[r1] && rankGroups[r2] && rankGroups[r3] && rankGroups[r4]) {
+                    // Generate combinations across groups (simplifying to pick first few to avoid exploding combo array)
+                    // Pick combinations of cards
+                    for (let c0 of rankGroups[r0]) {
+                        for (let c1 of rankGroups[r1]) {
+                            for (let c2 of rankGroups[r2]) {
+                                for (let c3 of rankGroups[r3]) {
+                                    for (let c4 of rankGroups[r4]) {
+                                        straights.push([c0, c1, c2, c3, c4]);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            // Flushes search
+            const suitGroups = {};
+            hand.forEach(c => {
+                if (!suitGroups[c.suit]) suitGroups[c.suit] = [];
+                suitGroups[c.suit].push(c);
+            });
+            Object.keys(suitGroups).forEach(suit => {
+                const grp = suitGroups[suit];
+                if (grp.length >= 5) {
+                    // Form combinations. To prevent lagging, only generate a couple of low-high options
+                    // We just take combinations of 5 cards (up to 20 representative combos)
+                    for (let i = 0; i < grp.length - 4; i++) {
+                        flushes.push(grp.slice(i, i + 5));
+                    }
+                }
+            });
+
+            // Full Houses search: Triple + Pair
+            triples.forEach(trip => {
+                const tripRank = trip[0].rank;
+                pairs.forEach(pair => {
+                    if (pair[0].rank !== tripRank) {
+                        fullHouses.push([...trip, ...pair]);
+                    }
+                });
+            });
+
+            // Straight flushes
+            straights.forEach(str => {
+                if (str.every(c => c.suit === str[0].suit)) {
+                    straightFlushes.push(str);
+                }
+            });
+
+            return {
+                1: singles,
+                2: pairs,
+                3: triples,
+                5: [...straights, ...flushes, ...fullHouses, ...bombs, ...straightFlushes]
+            };
+        }
+
+        // Find the absolute best/smallest valid play for AI
+        function findBestAIPlay(playerIndex) {
+            const aiHand = players[playerIndex].hand;
+            const combos = generateAllCombos(aiHand);
+
+            // CASE 1: AI starts a free turn (no previous play)
+            if (!lastPlay) {
+                // Rule: If it's first play of the entire round, must contain Club 3
+                if (isFirstPlayOfRound) {
+                    // Filter combos that contain C3
+                    const possibleLists = [...combos[5], ...combos[3], ...combos[2], ...combos[1]];
+                    const validC3Combos = possibleLists.filter(list => list.some(c => c.rank === '3' && c.suit === 'C'));
+                    
+                    if (validC3Combos.length > 0) {
+                        // AI prefers 5-card combos > triples > pairs > singles containing C3 to maximize play value
+                        validC3Combos.sort((a, b) => {
+                            if (a.length !== b.length) return b.length - a.length; // Larger combination length first
+                            const detA = getComboDetails(a);
+                            const detB = getComboDetails(b);
+                            return detA.score - detB.score; // Smallest score of that length first
+                        });
+                        return validC3Combos[0];
+                    }
+                    // Fallback
+                    return [aiHand.find(c => c.rank === '3' && c.suit === 'C')];
+                }
+
+                // Ordinary free-play: AI wants to get rid of cards.
+                // Smart heuristic: Try playing 5-card combos first (lowest first), then triples, then pairs, then smallest singles
+                if (combos[5].length > 0) {
+                    // Sort 5 card combos by strength score
+                    combos[5].sort((a, b) => getComboDetails(a).score - getComboDetails(b).score);
+                    return combos[5][0];
+                }
+                if (combos[3].length > 0) {
+                    combos[3].sort((a, b) => getComboDetails(a).score - getComboDetails(b).score);
+                    return combos[3][0];
+                }
+                if (combos[2].length > 0) {
+                    combos[2].sort((a, b) => getComboDetails(a).score - getComboDetails(b).score);
+                    return combos[2][0];
+                }
+                // Single card: play the smallest single
+                const sortedHand = [...aiHand].sort((a, b) => a.absScore - b.absScore);
+                return [sortedHand[0]];
+            }
+
+            // CASE 2: AI must beat the current lastPlay
+            const reqSize = lastPlay.cardsCount;
+            const validCandidates = [];
+
+            if (combos[reqSize]) {
+                combos[reqSize].forEach(list => {
+                    if (canPlayCombo(list, lastPlay, false)) {
+                        validCandidates.push(list);
+                    }
+                });
+            }
+
+            // If it's a 5-card hand, AI can also bomb it or play straight flush even if previous wasn't a bomb
+            if (reqSize === 5) {
+                // Get all bombs and straight flushes to check if they can beat the last play
+                const highWeapons = combos[5].filter(list => {
+                    const det = getComboDetails(list);
+                    return det && (det.type === 'BOMB' || det.type === 'STRAIGHT_FLUSH');
+                });
+                highWeapons.forEach(list => {
+                    if (canPlayCombo(list, lastPlay, false)) {
+                        validCandidates.push(list);
+                    }
+                });
+            }
+
+            if (validCandidates.length > 0) {
+                // Heuristic: Pick the valid combo that has the LOWEST score, so the AI saves its highest cards
+                validCandidates.sort((a, b) => getComboDetails(a).score - getComboDetails(b).score);
+                return validCandidates[0];
+            }
+
+            return null; // Must PASS
+        }
+
+
+        // --- STREAMING_CHUNK: User Interface Renderers ---
+
+        function renderUserHand() {
+            const container = document.getElementById('player-hand-container');
+            container.innerHTML = '';
+            
+            const handSize = players[0].hand.length;
+            if (handSize === 0) return;
+
+            // Calculate dynamic fanned out cards overlapping spacing
+            const containerWidth = container.clientWidth || 800;
+            const cardWidth = 80; // approximate width of custom card
+            const maxOverlapWidth = containerWidth - cardWidth - 20;
+            const offset = handSize > 1 ? Math.min(48, maxOverlapWidth / (handSize - 1)) : 0;
+
+            players[0].hand.forEach((card, index) => {
+                const cardEl = document.createElement('div');
+                cardEl.className = `card-container absolute bottom-0 bg-white border border-slate-300 rounded-xl shadow-md w-14 sm:w-16 md:w-[76px] h-24 sm:h-28 md:h-[110px] flex flex-col justify-between p-1.5 md:p-2 cursor-pointer select-none transition-all duration-150`;
+                
+                // Position card beautifully fanned out
+                cardEl.style.left = `${index * offset}px`;
+                cardEl.style.zIndex = index;
+
+                // Color configuration based on suit
+                const suitColor = SUIT_COLORS[card.suit];
+                const suitSymbol = SUITS[card.suit];
+
+                // Check if card is selected
+                const isSelected = selectedUserCards.some(c => c.id === card.id);
+                if (isSelected) {
+                    cardEl.classList.add('selected');
+                }
+
+                // Render interior of the card (Top value, Large center suit, bottom value flipped)
+                cardEl.innerHTML = `
+                    <div class="flex justify-between items-start leading-none w-full">
+                        <span class="text-sm md:text-base font-extrabold ${suitColor}">${card.rank}</span>
+                        <span class="text-xs md:text-sm ${suitColor}">${suitSymbol}</span>
+                    </div>
+                    <div class="text-center text-xl md:text-3xl ${suitColor} select-none leading-none -mt-2">
+                        ${suitSymbol}
+                    </div>
+                    <div class="flex justify-between items-end leading-none w-full transform rotate-180">
+                        <span class="text-sm md:text-base font-extrabold ${suitColor}">${card.rank}</span>
+                        <span class="text-xs md:text-sm ${suitColor}">${suitSymbol}</span>
+                    </div>
+                `;
+
+                // Add selection tap event
+                cardEl.onclick = () => {
+                    if (currentTurn !== 0 || !gameActive) return;
+                    playSynthSound('slide');
+                    const foundIndex = selectedUserCards.findIndex(c => c.id === card.id);
+                    if (foundIndex >= 0) {
+                        selectedUserCards.splice(foundIndex, 1);
+                    } else {
+                        selectedUserCards.push(card);
+                    }
+                    renderUserHand();
+                    validateUserSelection();
+                };
+
+                container.appendChild(cardEl);
+            });
+
+            document.getElementById('player-card-count').innerText = handSize;
+        }
+
+        function renderAICardBacks() {
+            // Renders placeholder stack card backs on the sidebar panels so the user has an immersive visual feedback of AI deck sizes
+            for (let i = 1; i <= 3; i++) {
+                const previewEl = document.getElementById(`ai${i}-hand-preview`);
+                const count = players[i].hand.length;
+                previewEl.innerHTML = '';
+                
+                document.getElementById(`ai${i}-card-count`).innerText = `手牌: ${count} 張`;
+
+                for (let c = 0; c < count; c++) {
+                    const cardBack = document.createElement('div');
+                    cardBack.className = "w-3 h-5 bg-gradient-to-br from-red-700 to-red-900 border border-red-500 rounded shadow-sm opacity-80 flex-shrink-0";
+                    previewEl.appendChild(cardBack);
+                }
+            }
+        }
+
+        function renderDeskPool() {
+            const pool = document.getElementById('center-cards-pool');
+            pool.innerHTML = '';
+
+            if (!lastPlay || lastPlay.cards.length === 0) {
+                pool.innerHTML = `
+                    <div class="text-emerald-500/50 font-medium text-xs md:text-sm text-center py-6 px-4">
+                        桌面上目前無卡牌<br><span class="text-[10px] text-emerald-600">任意出牌或順延上家！</span>
+                    </div>
+                `;
+                document.getElementById('desk-play-info').innerText = '';
+                return;
+            }
+
+            // Render cards currently on desk
+            lastPlay.cards.forEach((card, idx) => {
+                const cardEl = document.createElement('div');
+                cardEl.className = `bg-white border border-slate-300 rounded-lg shadow-lg w-12 h-18 sm:w-14 sm:h-20 flex flex-col justify-between p-1 flex-shrink-0 transform rotate-[${(idx - 2) * 2}deg]`;
+                
+                const suitColor = SUIT_COLORS[card.suit];
+                const suitSymbol = SUITS[card.suit];
+
+                cardEl.innerHTML = `
+                    <div class="flex justify-between items-start leading-none text-[11px] font-extrabold ${suitColor}">
+                        <span>${card.rank}</span>
+                        <span>${suitSymbol}</span>
+                    </div>
+                    <div class="text-center text-lg ${suitColor} -mt-1 leading-none select-none">
+                        ${suitSymbol}
+                    </div>
+                    <div class="flex justify-between items-end leading-none text-[11px] font-extrabold ${suitColor} transform rotate-180">
+                        <span>${card.rank}</span>
+                        <span>${suitSymbol}</span>
+                    </div>
+                `;
+                pool.appendChild(cardEl);
+            });
+
+            // Display descriptive banner
+            const comboText = translateCombo(lastPlay);
+            const playerWhoPlayed = players[lastPlay.playedBy].name;
+            document.getElementById('desk-play-info').innerHTML = `
+                <span class="text-amber-400 font-bold">${playerWhoPlayed}</span> 
+                打出: <span class="text-white underline font-semibold bg-emerald-900/40 px-2 py-0.5 rounded">${comboText}</span>
+            `;
+        }
+
+        function validateUserSelection() {
+            const msgEl = document.getElementById('validation-msg');
+            const playBtn = document.getElementById('playBtn');
+
+            if (selectedUserCards.length === 0) {
+                msgEl.innerText = "";
+                playBtn.disabled = true;
+                return;
+            }
+
+            const current = getComboDetails(selectedUserCards);
+            if (!current) {
+                msgEl.innerText = "⚠️ 無效的牌型組合！";
+                playBtn.disabled = true;
+                return;
+            }
+
+            const canPlay = canPlayCombo(selectedUserCards, lastPlay, isFirstPlayOfRound);
+            if (!canPlay) {
+                if (isFirstPlayOfRound) {
+                    msgEl.innerText = "⚠️ 首輪出牌必須包含梅花 3！";
+                } else if (lastPlay && selectedUserCards.length !== lastPlay.cardsCount) {
+                    msgEl.innerText = `⚠️ 必須跟著上一家出 ${lastPlay.cardsCount} 張牌！`;
+                } else {
+                    msgEl.innerText = "⚠️ 出牌必須大於上家！";
+                }
+                playBtn.disabled = true;
+                return;
+            }
+
+            // Valid play
+            msgEl.innerHTML = `<span class="text-green-400">✅ 判定合法: ${translateCombo(current)}</span>`;
+            playBtn.disabled = false;
+        }
+
+        function sortUserHand(type) {
+            playSynthSound('slide');
+            if (type === 'rank') {
+                sortHandByRank(players[0].hand);
+            } else {
+                sortHandBySuit(players[0].hand);
+            }
+            renderUserHand();
+        }
+
+
+        // --- STREAMING_CHUNK: Core Game Loops & Turns Controller ---
+
+        function restartGame() {
+            playSynthSound('shuffle');
+            logHistory("洗牌中...");
+            
+            // 1. Reset state
+            selectedUserCards = [];
+            lastPlay = null;
+            passCount = 0;
+            isFirstPlayOfRound = true;
+            gameActive = true;
+
+            // 2. Build and shuffle deck
+            deck = createDeck();
+            shuffle(deck);
+
+            // 3. Deal cards
+            players[0].hand = [];
+            players[1].hand = [];
+            players[2].hand = [];
+            players[3].hand = [];
+
+            for (let i = 0; i < 52; i++) {
+                players[i % 4].hand.push(deck[i]);
+            }
+
+            // Sort player cards initially
+            sortHandByRank(players[0].hand);
+
+            // 4. Find starting turn (the one holding Club 3)
+            let starter = 0;
+            for (let p = 0; p < 4; p++) {
+                const hasC3 = players[p].hand.some(c => c.rank === '3' && c.suit === 'C');
+                if (hasC3) {
+                    starter = p;
+                    break;
+                }
+            }
+
+            currentTurn = starter;
+
+            // Render all boards
+            renderUserHand();
+            renderAICardBacks();
+            renderDeskPool();
+            hideGameOverModal();
+
+            // Set visual light indicator and log
+            logHistory(`發牌完畢！持梅花 3 的 [${players[starter].name}] 首先開始。`);
+            
+            // Start state engine
+            updateTurnIndicators();
+            executeTurn();
+        }
+
+        function updateTurnIndicators() {
+            // Turn Light
+            const light = document.getElementById('player-turn-light');
+            const turnText = document.getElementById('player-turn-text');
+
+            // Reset thinking animations
+            for (let i = 1; i <= 3; i++) {
+                document.getElementById(`ai${i}-status`).classList.add('hidden');
+                document.getElementById(`ai${i}-panel`).classList.remove('ring-2', 'ring-amber-400', 'bg-emerald-950/80');
+            }
+
+            if (currentTurn === 0) {
+                light.className = "w-2.5 h-2.5 rounded-full bg-green-500 animate-pulse";
+                turnText.innerText = "輪到你的回合！請選牌出牌。";
+                document.getElementById('passBtn').disabled = (lastPlay === null); // Can't pass if starting free play
+                document.getElementById('playBtn').disabled = true; // wait for valid selection
+                document.getElementById('hintBtn').disabled = false;
+            } else {
+                light.className = "w-2.5 h-2.5 rounded-full bg-red-500 animate-pulse";
+                turnText.innerText = `輪到 [${players[currentTurn].name}] 思考中...`;
+                document.getElementById('passBtn').disabled = true;
+                document.getElementById('playBtn').disabled = true;
+                document.getElementById('hintBtn').disabled = true;
+
+                // Highlight Active AI Panel
+                document.getElementById(`ai${currentTurn}-status`).classList.remove('hidden');
+                document.getElementById(`ai${currentTurn}-panel`).classList.add('ring-2', 'ring-amber-400', 'bg-emerald-950/80');
+            }
+        }
+
+        function executeTurn() {
+            if (!gameActive) return;
+
+            if (currentTurn === 0) {
+                // Wait for player interactions
+                validateUserSelection();
+                return;
+            }
+
+            // AI Turn execution with simulated latency delay for dramatic realism
+            const thinkingTime = 1000 + Math.random() * 800;
+            setTimeout(() => {
+                const aiPlayResult = findBestAIPlay(currentTurn);
+
+                if (aiPlayResult) {
+                    // AI Plays
+                    playCards(currentTurn, aiPlayResult);
+                } else {
+                    // AI Passes
+                    passTurn(currentTurn);
+                }
+            }, thinkingTime);
+        }
+
+        function playCards(playerIdx, cardsToPlay) {
+            playSynthSound('play');
+            
+            const comboDetails = getComboDetails(cardsToPlay);
+            
+            // 1. Remove played cards from player hand
+            const pHand = players[playerIdx].hand;
+            cardsToPlay.forEach(cardPlayed => {
+                const index = pHand.findIndex(c => c.id === cardPlayed.id);
+                if (index >= 0) {
+                    pHand.splice(index, 1);
+                }
+            });
+
+            // 2. Set Desk play state
+            lastPlay = {
+                type: comboDetails.type,
+                score: comboDetails.score,
+                highestCard: comboDetails.highestCard,
+                cards: [...cardsToPlay],
+                cardsCount: cardsToPlay.length,
+                subRank: comboDetails.subRank,
+                playedBy: playerIdx
+            };
+
+            passCount = 0; // reset pass streak
+            isFirstPlayOfRound = false; // C3 play constraint unlocked
+
+            // Update user interface
+            if (playerIdx === 0) {
+                selectedUserCards = [];
+            }
+
+            logHistory(`${players[playerIdx].name} 打出了 ${translateCombo(comboDetails)}`);
+            showActionBanner(`${players[playerIdx].name}: ${translateCombo(comboDetails)}`);
+
+            renderUserHand();
+            renderAICardBacks();
+            renderDeskPool();
+
+            // Check Win Condition
+            if (pHand.length === 0) {
+                triggerGameOver(playerIdx);
+                return;
+            }
+
+            // Proceed to next player
+            currentTurn = (playerIdx + 1) % 4;
+            updateTurnIndicators();
+            executeTurn();
+        }
+
+        function passTurn(playerIdx) {
+            playSynthSound('pass');
+            passCount++;
+
+            logHistory(`${players[playerIdx].name} 選擇了 PASS (過)`);
+            showActionBanner(`${players[playerIdx].name} PASS`, true);
+
+            // Check if three consecutive players passed (which yields a fresh round starting)
+            if (passCount === 3) {
+                setTimeout(() => {
+                    logHistory(`其餘三家皆過牌，由 ${players[lastPlay.playedBy].name} 重新獲得出牌主導權！`);
+                    showActionBanner(`新牌局主導: ${players[lastPlay.playedBy].name}`, false);
+                    lastPlay = null; // resets deck control
+                    passCount = 0;
+                    renderDeskPool();
+                    
+                    // The winner of the trick starts the next round
+                    currentTurn = lastPlay ? lastPlay.playedBy : 0; // fallback safety
+                    updateTurnIndicators();
+                    executeTurn();
+                }, 1000);
+                return;
+            }
+
+            // Proceed standard
+            currentTurn = (playerIdx + 1) % 4;
+            updateTurnIndicators();
+            executeTurn();
+        }
+
+        function onPlayClick() {
+            if (currentTurn !== 0) return;
+            // Execute validation check once more
+            const canPlay = canPlayCombo(selectedUserCards, lastPlay, isFirstPlayOfRound);
+            if (!canPlay) return;
+
+            playCards(0, selectedUserCards);
+        }
+
+        function onPassClick() {
+            if (currentTurn !== 0 || lastPlay === null) return;
+            passTurn(0);
+        }
+
+        function onHintClick() {
+            if (currentTurn !== 0 || !gameActive) return;
+            
+            playSynthSound('slide');
+            const bestPlay = findBestAIPlay(0);
+            if (!bestPlay) {
+                showToast("提示：此輪您目前無法壓制，建議 PASS。");
+                return;
+            }
+
+            // Select recommended cards
+            selectedUserCards = [...bestPlay];
+            renderUserHand();
+            validateUserSelection();
+            showToast(`提示您出牌：${translateCombo(getComboDetails(bestPlay))}`, "💡");
+        }
+
+
+        // --- STREAMING_CHUNK: System Overlays & Utilities ---
+
+        function showActionBanner(text, isPass = false) {
+            const banner = document.getElementById('action-banner');
+            banner.innerText = text;
+            banner.className = `absolute bottom-2 left-1/2 -translate-x-1/2 px-4 py-1.5 rounded-lg text-xs font-bold shadow-md transition-all duration-300`;
+            if (isPass) {
+                banner.classList.add('bg-slate-800/90', 'border', 'border-slate-600', 'text-slate-300');
+            } else {
+                banner.classList.add('bg-amber-500/90', 'border', 'border-amber-400', 'text-slate-950');
+            }
+            banner.classList.remove('hidden');
+            setTimeout(() => {
+                banner.classList.add('hidden');
+            }, 1800);
+        }
+
+        function triggerGameOver(winnerIdx) {
+            gameActive = false;
+            
+            // Play winning/losing melodies
+            if (winnerIdx === 0) {
+                playSynthSound('win');
+                document.getElementById('endGameTitle').innerText = "🎉 恭喜獲勝！";
+                document.getElementById('endGameTitle').className = "text-4xl font-extrabold tracking-widest text-transparent bg-clip-text bg-gradient-to-r from-amber-300 to-yellow-500 mb-1";
+            } else {
+                playSynthSound('lose');
+                document.getElementById('endGameTitle').innerText = "💀 遺憾落敗！";
+                document.getElementById('endGameTitle').className = "text-4xl font-extrabold tracking-widest text-red-500 mb-1";
+            }
+
+            // Populate Score results table
+            for (let i = 0; i < 4; i++) {
+                const count = players[i].hand.length;
+                let text = `剩餘手牌: ${count} 張`;
+                
+                if (count === 0) {
+                    text = `<span class="text-green-400 font-bold">第一名出完！(0張)</span>`;
+                } else if (count >= 13) {
+                    text = `<span class="text-red-500 font-bold">烤大豬！ 13張扣分加三倍</span>`;
+                } else if (count >= 10) {
+                    text = `<span class="text-red-400 font-bold">雙倍大處罰！ ${count}張</span>`;
+                }
+
+                let scoreId = "";
+                if (i === 0) scoreId = "score-player";
+                else if (i === 1) scoreId = "score-ai1";
+                else if (i === 2) scoreId = "score-ai2";
+                else if (i === 3) scoreId = "score-ai3";
+
+                document.getElementById(scoreId).innerHTML = text;
+            }
+
+            document.getElementById('gameOverModal').classList.remove('hidden');
+        }
+
+        function hideGameOverModal() {
+            document.getElementById('gameOverModal').classList.add('hidden');
+        }
+
+        function showRulesModal() {
+            document.getElementById('rulesModal').classList.remove('hidden');
+        }
+
+        function closeRulesModal() {
+            document.getElementById('rulesModal').classList.add('hidden');
+        }
+
+        // Window Resizing Handlers to readjust responsive card overlapping spaces on hand refresh
+        window.onresize = () => {
+            renderUserHand();
+        };
+
+        // --- GAME STARTING INITIALIZATION TRICK ---
+        window.onload = function() {
+            restartGame();
+        };
+    </script>
+</body>
+</html>
